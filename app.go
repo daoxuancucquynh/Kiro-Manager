@@ -10,6 +10,7 @@ import (
 
 	"kiro-manager/awssso"
 	"kiro-manager/backup"
+	"kiro-manager/internal/shield"
 	"kiro-manager/kiroprocess"
 	"kiro-manager/kiroversion"
 	"kiro-manager/machineid"
@@ -33,6 +34,11 @@ func NewApp() *App {
 // startup is called when the app starts
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// 初始化 Shield 保護殼模組
+	// 用於保護敏感字串和命令，避免防毒軟體靜態分析誤報
+	shield.Init()
+
 	// 不再於啟動時自動備份，避免觸發防毒軟體誤報
 	// 改為在用戶首次執行需要備份的操作時才觸發
 }
