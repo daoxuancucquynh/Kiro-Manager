@@ -1,4 +1,4 @@
-name: Create Release
+name: Build and Release
 
 on:
   push:
@@ -13,12 +13,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            platform: linux
-            arch: amd64
           - os: macos-latest
-            platform: darwin
-            arch: universal
+            platform: darwin/universal
+            output: kiro-manager-darwin-universal
+          - os: ubuntu-22.04
+            platform: linux/amd64
+            output: kiro-manager-linux-amd64
 
     runs-on: ${{ matrix.os }}
 
@@ -29,7 +29,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25.5'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,44 +39,27 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Install Linux dependencies
-        if: matrix.platform == 'linux'
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
 
       - name: Build
-        run: |
-          wails build -platform ${{ matrix.platform }}/${{ matrix.arch }}
+        run: wails build -platform ${{ matrix.platform }} -o ${{ matrix.output }}
 
-      - name: Rename artifact (Linux)
-        if: matrix.platform == 'linux'
-        run: |
-          mv build/bin/kiro-manager build/bin/kiro-manager-linux-amd64
-
-      - name: Rename artifact (macOS)
-        if: matrix.platform == 'darwin'
-        run: |
-          cd build/bin
-          zip -r kiro-manager-macos-universal.zip kiro-manager.app
-
-      - name: Upload artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kiro-manager-${{ matrix.platform }}
-          path: |
-            build/bin/kiro-manager-linux-amd64
-            build/bin/kiro-manager-macos-universal.zip
+          name: ${{ matrix.output }}
+          path: build/bin/${{ matrix.output }}
 
   release:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
+      - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -84,8 +67,5 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          files: artifacts/**/*
           generate_release_notes: true
-          files: |
-            artifacts/kiro-manager-linux/*
-            artifacts/kiro-manager-darwin/*
