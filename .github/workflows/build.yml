@@ -1,12 +1,7 @@
-name: Build and Release
+name: Build
 
 on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
+  workflow_dispatch:
 
 jobs:
   build:
@@ -74,19 +69,3 @@ jobs:
         with:
           name: ${{ matrix.output }}
           path: build/bin/${{ matrix.output }}
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download All Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-          generate_release_notes: true
